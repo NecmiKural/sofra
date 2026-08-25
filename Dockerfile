@@ -26,6 +26,10 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV DATABASE_URL=file:/app/data/sofra.db
+# Next's standalone server binds to $HOSTNAME, and container runtimes set that
+# to the container ID — which resolves nowhere, so the server never starts.
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
 
 COPY --from=clitools /clitools/node_modules ./node_modules
 COPY --from=builder /app/.next/standalone ./
