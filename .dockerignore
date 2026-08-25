@@ -1,0 +1,20 @@
+# Installed inside the image — host binaries are the wrong platform.
+node_modules
+.next
+
+# Secrets: Next copies .env* into the standalone output, which ships in the image.
+.env
+.env.local
+.env.*.local
+
+# Local database
+data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+.git
+.github
+*.tsbuildinfo
+.DS_Store

@@ -1,0 +1,17 @@
+services:
+  sofra:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
+      - DATABASE_URL=file:/app/data/sofra.db
+      # Load the demo venue on first start:
+      # - SEED_DEMO=1
+      # - BASE_URL=https://menu.example.com
+    volumes:
+      - sofra-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  sofra-data:

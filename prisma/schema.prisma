@@ -1,0 +1,220 @@
+// Sofra data model — Prisma 6 + SQLite.
+// Table names match the original hand-written schema; field names match the
+// TypeScript types exported from src/lib/repo.ts. Money is always an integer in
+// the currency's minor unit (kuruş / cents).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Venue {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  welcomeJson     String   @default("{}")
+  currency        String   @default("TRY")
+  languages       String   @default("tr,en")
+  defaultLang     String   @default("tr")
+  themePrimary    String   @default("#c2410c")
+  themeMode       String   @default("auto")
+  featureWaiter   Boolean  @default(true)
+  featureBill     Boolean  @default(true)
+  featureOrdering Boolean  @default(true)
+  featurePayments Boolean  @default(true)
+  paymentProvider String   @default("mock")
+  phone           String?
+  whatsapp        String?
+  instagram       String?
+  hours           String?
+  address         String?
+  createdAt       DateTime @default(now())
+
+  users      User[]
+  tables     Table[]
+  categories Category[]
+  menuItems  MenuItem[]
+  requests   Request[]
+  orders     Order[]
+  payments   Payment[]
+  scanEvents ScanEvent[]
+
+  @@map("venues")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         String   @default("owner")
+  venueId      String
+  createdAt    DateTime @default(now())
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+model Table {
+  id      String  @id @default(cuid())
+  venueId String
+  number  Int
+  label   String?
+
+  venue      Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  requests   Request[]
+  orders     Order[]
+  scanEvents ScanEvent[]
+
+  @@unique([venueId, number])
+  @@map("tables")
+}
+
+model Category {
+  id       String  @id @default(cuid())
+  venueId  String
+  parentId String?
+  nameJson String
+  sort     Int     @default(0)
+
+  venue    Venue      @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children Category[] @relation("CategoryTree")
+  items    MenuItem[]
+
+  @@map("categories")
+}
+
+model MenuItem {
+  id          String  @id @default(cuid())
+  venueId     String
+  categoryId  String
+  nameJson    String
+  descJson    String  @default("{}")
+  priceMinor  Int
+  emoji       String?
+  imageUrl    String?
+  prepMinutes Int?
+  tags        String  @default("")
+  available   Boolean @default(true)
+  sort        Int     @default(0)
+
+  venue        Venue         @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  optionGroups OptionGroup[]
+  orderItems   OrderItem[]
+
+  @@map("menu_items")
+}
+
+model OptionGroup {
+  id       String  @id @default(cuid())
+  itemId   String
+  nameJson String
+  type     String  @default("single")
+  required Boolean @default(false)
+  sort     Int     @default(0)
+
+  item    MenuItem       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  choices OptionChoice[]
+
+  @@map("option_groups")
+}
+
+model OptionChoice {
+  id            String @id @default(cuid())
+  groupId       String
+  nameJson      String
+  priceDelta    Int    @default(0)
+  priceAbsolute Int?
+  sort          Int    @default(0)
+
+  group OptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("option_choices")
+}
+
+model Request {
+  id         String    @id @default(cuid())
+  venueId    String
+  tableId    String?
+  type       String
+  status     String    @default("open")
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  venue Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table Table? @relation(fields: [tableId], references: [id], onDelete: SetNull)
+
+  @@index([venueId, status])
+  @@map("requests")
+}
+
+model Order {
+  id         String   @id @default(cuid())
+  venueId    String
+  tableId    String?
+  status     String   @default("new")
+  totalMinor Int
+  note       String?
+  paid       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  venue Venue       @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table Table?      @relation(fields: [tableId], references: [id], onDelete: SetNull)
+  items OrderItem[]
+
+  @@index([venueId, status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String  @id @default(cuid())
+  orderId        String
+  itemId         String?
+  nameSnap       String
+  qty            Int     @default(1)
+  unitPriceMinor Int
+  choicesSnap    String  @default("")
+
+  order Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  item  MenuItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@map("order_items")
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  venueId     String
+  tableNumber Int?
+  orderIds    String    @default("")
+  amountMinor Int
+  provider    String    @default("mock")
+  status      String    @default("pending")
+  providerRef String?
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model ScanEvent {
+  id        String   @id @default(cuid())
+  venueId   String
+  tableId   String?
+  lang      String?
+  createdAt DateTime @default(now())
+
+  venue Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table Table? @relation(fields: [tableId], references: [id], onDelete: SetNull)
+
+  @@index([venueId, createdAt])
+  @@map("scan_events")
+}

@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: sofra-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        value: file:/app/data/sofra.db
+      # Free instances have no persistent disk, so the demo re-seeds on restart.
+      - key: SEED_DEMO
+        value: "1"
+      - key: SESSION_SECRET
+        generateValue: true

@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+:root {
+  --venue-primary: #c2410c;
+  --bg: #faf7f2;
+  --fg: #1c1917;
+  --card: #ffffff;
+  --muted: #78716c;
+  --line: #e7e0d8;
+}
+
+.dark-vars {
+  --bg: #131110;
+  --fg: #f5f0ea;
+  --card: #1e1b18;
+  --muted: #a8a29e;
+  --line: #2e2925;
+}
+
+.light-vars {
+  --bg: #faf7f2;
+  --fg: #1c1917;
+  --card: #ffffff;
+  --muted: #78716c;
+  --line: #e7e0d8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.force-light) {
+    --bg: #131110;
+    --fg: #f5f0ea;
+    --card: #1e1b18;
+    --muted: #a8a29e;
+    --line: #2e2925;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+}
+
+.btn-primary {
+  background: var(--venue-primary);
+  color: #fff;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-primary:disabled { opacity: 0.5; }
+
+.btn-ghost {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 0.75rem;
+  font-weight: 500;
+  transition: border-color 0.15s;
+}
+.btn-ghost:hover { border-color: var(--venue-primary); }
+
+.input {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  width: 100%;
+  color: var(--fg);
+}
+.input:focus { outline: 2px solid var(--venue-primary); outline-offset: 0; border-color: transparent; }
+
+.chip {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.chip.active {
+  background: var(--venue-primary);
+  color: #fff;
+  border-color: var(--venue-primary);
+}
+
+.muted { color: var(--muted); }
+.line { border-color: var(--line); }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.pulse-soft { animation: pulse-soft 1.6s ease-in-out infinite; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+}
