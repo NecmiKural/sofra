@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         paymentId: payment.id,
         amountMinor: amount,
         currency: venue.currency,
-        description: `${venue.name} — table ${tableRow.number}`,
+        description: `${venue.name}, table ${tableRow.number}`,
         returnUrl:
           returnUrl ||
           `/m/${venue.slug}?table=${tableRow.number}&t=${tableToken(venue.slug, tableRow.number)}`,

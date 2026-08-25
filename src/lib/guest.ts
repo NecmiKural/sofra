@@ -29,7 +29,7 @@ export function withTableTokens<T extends { number: number }>(slug: string, tabl
   return tables.map((t) => ({ ...t, token: tableToken(slug, t.number) }));
 }
 
-// ponytail: in-process fixed window — fine while the event bus is in-process too.
+// ponytail: in-process fixed window, fine while the event bus is in-process too.
 // Swap for Redis at the same time we go multi-instance (v1.0).
 const WINDOW_MS = 60_000;
 const MAX_KEYS = 5000;

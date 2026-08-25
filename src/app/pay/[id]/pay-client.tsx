@@ -71,7 +71,7 @@ export default function PayClient({
         )}
 
         <p className="mt-4 text-xs muted">
-          Demo checkout — no real charge. Swap in Stripe/iyzico via <code>src/lib/payments</code>.
+          Demo checkout, no real charge. Swap in Stripe/iyzico via <code>src/lib/payments</code>.
         </p>
       </div>
     </div>

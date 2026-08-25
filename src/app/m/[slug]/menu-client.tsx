@@ -357,7 +357,7 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
                     {o.items.map((it, i) => (
                       <li key={i}>
                         {it.qty}× {tj(it.nameSnap, lang)}
-                        {it.choicesSnap && <span className="text-xs"> — {parseChoices(it.choicesSnap, lang)}</span>}
+                        {it.choicesSnap && <span className="text-xs"> · {parseChoices(it.choicesSnap, lang)}</span>}
                       </li>
                     ))}
                   </ul>

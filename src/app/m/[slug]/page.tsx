@@ -23,7 +23,7 @@ export default async function MenuPage({ params, searchParams }: Props) {
       ? sp.lang
       : payload.venue.defaultLang;
 
-  // Scan analytics — must never break the menu.
+  // Scan analytics must never break the menu.
   try {
     const table =
       payload.tableNumber != null ? await getTableByNumber(payload.venue.id, payload.tableNumber) : null;

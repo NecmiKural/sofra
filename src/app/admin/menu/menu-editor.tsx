@@ -472,7 +472,7 @@ function ItemForm({
       </div>
 
       <label className="block text-sm">
-        <span className="muted">Image URL (optional — emoji is used otherwise)</span>
+        <span className="muted">Image URL (optional, emoji is used otherwise)</span>
         <input className="input mt-1" value={draft.imageUrl} onChange={(e) => set({ imageUrl: e.target.value })} placeholder="https://…" />
       </label>
 

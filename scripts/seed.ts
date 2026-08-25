@@ -11,7 +11,7 @@ async function main() {
   const TRY = (v: number) => Math.round(v * 100);
 
   if (await getVenueBySlug("demo")) {
-    console.log("Demo venue already exists — nothing to do. (Delete data/sofra.db to reseed.)");
+    console.log("Demo venue already exists, nothing to do. (Delete data/sofra.db to reseed.)");
     return;
   }
 

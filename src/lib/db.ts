@@ -1,5 +1,5 @@
 /**
- * Sofra data layer — Prisma 6 on SQLite.
+ * Sofra data layer: Prisma 6 on SQLite.
  * The schema lives in `prisma/schema.prisma`; migrations are applied with
  * `npm run db:migrate` (dev) or `npx prisma migrate deploy` (production).
  *

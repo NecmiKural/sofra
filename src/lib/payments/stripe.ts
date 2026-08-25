@@ -1,7 +1,7 @@
 import type { PaymentProvider } from "./index";
 
 /**
- * Stripe adapter — SKELETON (v0.2 roadmap).
+ * Stripe adapter, SKELETON (v0.2 roadmap).
  *
  * To implement:
  *  1. `npm install stripe`

@@ -121,7 +121,7 @@ export default function SettingsForm({ venue }: { venue: Venue }) {
         </section>
 
         <section className="card space-y-3 p-5">
-          <h2 className="font-semibold">Features — turn on only what you need</h2>
+          <h2 className="font-semibold">Features: turn on only what you need</h2>
           <div className="flex flex-wrap gap-2">
             {flagDefs.map(([key, label]) => (
               <label key={key} className={`chip cursor-pointer px-4 py-2 text-sm ${flags[key] ? "active" : ""}`}>

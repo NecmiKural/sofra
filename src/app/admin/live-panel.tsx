@@ -242,7 +242,7 @@ function OrderCard({ order, currency, lang, onPatch }: { order: Ord; currency: s
         {order.items.map((it, i) => (
           <li key={i}>
             <span className="font-medium">{it.qty}×</span> {tj(it.nameSnap, lang)}
-            {it.choicesSnap && <span className="muted"> — {choices(it.choicesSnap, lang)}</span>}
+            {it.choicesSnap && <span className="muted"> · {choices(it.choicesSnap, lang)}</span>}
           </li>
         ))}
       </ul>

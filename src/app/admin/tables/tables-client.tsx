@@ -81,7 +81,7 @@ export default function TablesClient({ initialTables, slug }: { initialTables: T
           </div>
         ))}
       </div>
-      {tables.length === 0 && <p className="card p-6 muted">No tables yet — add your first table above.</p>}
+      {tables.length === 0 && <p className="card p-6 muted">No tables yet. Add your first table above.</p>}
     </div>
   );
 }

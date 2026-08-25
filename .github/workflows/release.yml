@@ -46,7 +46,7 @@ jobs:
         with:
           generate_release_notes: true
           body: |
-            **Live demo** — https://sofra-demo.onrender.com
+            **Live demo:** https://sofra-demo.onrender.com
 
             ```bash
             docker run -d -p 3000:3000 -v sofra-data:/app/data \
@@ -62,5 +62,5 @@ jobs:
           if [ -n "$HOOK" ]; then
             curl -fsS "$HOOK" > /dev/null && echo "Demo redeploy triggered."
           else
-            echo "RENDER_DEPLOY_HOOK not set — skipping demo redeploy."
+            echo "RENDER_DEPLOY_HOOK not set, skipping demo redeploy."
           fi

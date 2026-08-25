@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const features = [
-  ["⚡", "Instant updates", "Change a price once — every table sees it live. No reprints."],
+  ["⚡", "Instant updates", "Change a price once, every table sees it live. No reprints."],
   ["🌍", "Multilingual", "Menu text is translated data, never baked into an image."],
-  ["🖐️", "Live table actions", "Call waiter, request bill, order — straight to the staff panel."],
+  ["🖐️", "Live table actions", "Call waiter, request bill, order, all straight to the staff panel."],
   ["💳", "Pay at the table", "Pluggable payment layer with a demo provider built in."],
   ["🎨", "Your brand", "Per-venue colors, light & dark, emoji or photo menus."],
   ["🐳", "Self-hosted", "One Docker container, SQLite inside. No commission, ever."],
@@ -20,7 +20,7 @@ export default function Landing() {
 
       <p className="mt-6 max-w-2xl text-xl leading-relaxed">
         Open-source QR menu, table service and payments for restaurants, cafés,
-        bars and hotels. <span className="muted">Your table, ready in a tap — on your own server.</span>
+        bars and hotels. <span className="muted">Your table, ready in a tap, on your own server.</span>
       </p>
 
       <div className="mt-8 flex flex-wrap gap-3">

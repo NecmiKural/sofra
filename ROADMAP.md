@@ -3,7 +3,7 @@
 Sofra follows semantic versioning. Each tagged release publishes a Docker image
 to `ghcr.io` and redeploys the live demo.
 
-## v0.1 — current
+## v0.1 (current)
 
 QR menus per table with signed table tokens, rate limited guest endpoints,
 multilingual menu data, categories and option groups,

@@ -2,7 +2,7 @@
  * Typed data access layer over Prisma. All functions are async.
  *
  * Timestamps are stored as `DateTime` but crossing the API boundary as epoch
- * milliseconds, exactly like the previous integer columns did — the conversion
+ * milliseconds, exactly like the previous integer columns did. The conversion
  * lives here so routes and components stay unchanged.
  */
 import { Prisma } from "@prisma/client";
@@ -500,7 +500,7 @@ export async function createOrder(
   lines: OrderLineInput[],
   note?: string
 ): Promise<OrderRow> {
-  // Prices always come from the database — the client's numbers are never trusted.
+  // Prices always come from the database. The client's numbers are never trusted.
   const ids = [...new Set(lines.map((l) => l.itemId).filter((v): v is string => typeof v === "string"))];
   const records = ids.length
     ? await prisma.menuItem.findMany({ where: { id: { in: ids }, venueId }, include: ITEM_INCLUDE })

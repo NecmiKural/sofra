@@ -1,4 +1,4 @@
-/** Password hashing with Node's built-in scrypt — no framework imports, safe for scripts. */
+/** Password hashing with Node's built-in scrypt. No framework imports, safe for scripts. */
 import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 export function hashPassword(password: string): string {

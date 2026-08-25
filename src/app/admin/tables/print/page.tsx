@@ -20,7 +20,7 @@ export default async function PrintPage() {
   return (
     <div className="p-6">
       <div className="no-print mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">QR sheet — {user.venue.name}</h1>
+        <h1 className="text-2xl font-bold">QR sheet: {user.venue.name}</h1>
         <span className="text-sm muted">Use your browser&apos;s print dialog (Ctrl/Cmd+P). One card per table.</span>
       </div>
 

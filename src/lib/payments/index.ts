@@ -6,7 +6,7 @@
  * checkout for an amount and how to confirm it.
  *
  * v0.1 ships a `mock` provider (instant success, for demos and development).
- * Real adapters (Stripe, iyzico) implement the same interface — see stripe.ts.
+ * Real adapters (Stripe, iyzico) implement the same interface. See stripe.ts.
  */
 
 export interface CreatePaymentInput {
