@@ -81,9 +81,21 @@ ve SQLite dosyası için yazılabilir bir dizin.
 
 ## Nasıl çalışır
 
-1. **Misafir masadaki QR'ı okutur** → `/m/{isletme}?table=N` açılır, menü kendi dilinde gelir.
+1. **Misafir masadaki QR'ı okutur** → `/m/{isletme}?table=N&t=...` açılır, menü kendi dilinde gelir.
 2. **İnceler, sipariş verir, çağırır veya hesabı ister** → istekler sunucu tarafında doğrulanır ve fiyatlanır.
 3. **Personel canlı görür** → `/admin` paneline olaylar SSE ile, masa numarası etiketiyle düşer. Yenilemek yok.
+
+## Güvenlik notları
+
+Her masanın QR bağlantısında `TABLE_TOKEN_SECRET` ile imzalanmış bir token (`?t=`) taşınır.
+Misafir uçları token'sız gelen masa numarasını reddeder; yani sipariş, garson çağırma ve ödeme
+tahmin edilen bir numarayla değil ancak gerçek bir okutmayla yapılabilir. İmzasız bağlantı menüyü
+gösterir ama aksiyonları kapatır. Misafir yazma istekleri IP + masa bazında hız sınırlıdır ve
+aynı masanın açık istekleri tek kayıtta birleştirilir.
+
+Hız sınırı süreç içi çalışır, yani tek instance'ı kapsar; çok instance desteği v1.0'daki Redis
+olay veriyoluyla gelir. `TABLE_TOKEN_SECRET` (veya yerine kullanılan `SESSION_SECRET`) değişirse
+basılı QR'lar geçersiz olur — **Masalar → QR sayfası yazdır** ile yeniden basın.
 
 Sıradaki adımlar için [ROADMAP.md](ROADMAP.md).
 

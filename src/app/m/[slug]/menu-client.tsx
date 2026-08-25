@@ -26,7 +26,7 @@ type LiveOrder = {
 };
 
 export default function GuestMenu({ payload, initialLang }: { payload: MenuPayload; initialLang: string }) {
-  const { venue, categories, tableNumber } = payload;
+  const { venue, categories, tableNumber, tableToken } = payload;
   const [lang, setLang] = useState(initialLang);
   const t = guestDict(lang);
 
@@ -48,18 +48,18 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
   const refreshRequests = useCallback(async () => {
     if (!tableNumber) return;
     try {
-      const res = await fetch(`/api/requests?slug=${venue.slug}&table=${tableNumber}`);
+      const res = await fetch(`/api/requests?slug=${venue.slug}&table=${tableNumber}&t=${tableToken}`);
       if (res.ok) setRequests(await res.json());
     } catch {}
-  }, [venue.slug, tableNumber]);
+  }, [venue.slug, tableNumber, tableToken]);
 
   const refreshOrders = useCallback(async () => {
     if (!tableNumber || !venue.featureOrdering) return;
     try {
-      const res = await fetch(`/api/orders?slug=${venue.slug}&table=${tableNumber}`);
+      const res = await fetch(`/api/orders?slug=${venue.slug}&table=${tableNumber}&t=${tableToken}`);
       if (res.ok) setOrders(await res.json());
     } catch {}
-  }, [venue.slug, tableNumber, venue.featureOrdering]);
+  }, [venue.slug, tableNumber, tableToken, venue.featureOrdering]);
 
   useEffect(() => {
     refreshRequests();
@@ -89,7 +89,7 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
       const res = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: venue.slug, table: tableNumber, type }),
+        body: JSON.stringify({ slug: venue.slug, table: tableNumber, type, t: tableToken }),
       });
       if (res.ok) {
         flash(type === "waiter" ? t.waiterCalled : t.billRequested);
@@ -128,6 +128,7 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
         body: JSON.stringify({
           slug: venue.slug,
           table: tableNumber,
+          t: tableToken,
           note: note || undefined,
           items: cart.map((l) => ({ itemId: l.itemId, qty: l.qty, choiceIds: l.choiceIds })),
         }),
@@ -149,11 +150,11 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
     if (!tableNumber) return;
     setBusy(true);
     try {
-      const returnUrl = `${window.location.origin}/m/${venue.slug}?table=${tableNumber}&lang=${lang}&paid=1`;
+      const returnUrl = `${window.location.origin}/m/${venue.slug}?table=${tableNumber}&t=${tableToken}&lang=${lang}&paid=1`;
       const res = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: venue.slug, table: tableNumber, returnUrl }),
+        body: JSON.stringify({ slug: venue.slug, table: tableNumber, returnUrl, t: tableToken }),
       });
       const data = await res.json();
       if (res.ok && data.checkoutUrl) window.location.href = data.checkoutUrl;

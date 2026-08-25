@@ -1,14 +1,23 @@
 import { guard, json } from "@/lib/api";
 import { publish } from "@/lib/bus";
+import { guestGate, verifyTableToken } from "@/lib/guest";
 import { createOrder, getTableByNumber, getVenueBySlug, listTableOrders, type OrderLineInput } from "@/lib/repo";
 
 /** Guest: place an order from the cart. Prices are always computed server-side. */
 export async function POST(req: Request) {
   return guard(async () => {
-    const body = (await req.json()) as { slug?: string; table?: number; note?: string; items?: OrderLineInput[] };
+    const body = (await req.json()) as {
+      slug?: string;
+      table?: number;
+      note?: string;
+      items?: OrderLineInput[];
+      t?: string;
+    };
     if (!body.slug || body.table == null || !Array.isArray(body.items) || body.items.length === 0) {
       return json({ error: "bad_request" }, 400);
     }
+    const blocked = guestGate(req, body.slug, Number(body.table), body.t, 10);
+    if (blocked) return blocked;
     const venue = await getVenueBySlug(body.slug);
     if (!venue) return json({ error: "venue_not_found" }, 404);
     if (!venue.featureOrdering) return json({ error: "feature_disabled" }, 403);
@@ -33,6 +42,9 @@ export async function GET(req: Request) {
     const slug = url.searchParams.get("slug");
     const table = url.searchParams.get("table");
     if (!slug || !table) return json({ error: "bad_request" }, 400);
+    if (!verifyTableToken(slug, Number(table), url.searchParams.get("t"))) {
+      return json({ error: "invalid_table_token" }, 403);
+    }
     const venue = await getVenueBySlug(slug);
     if (!venue) return json({ error: "venue_not_found" }, 404);
     const tableRow = await getTableByNumber(venue.id, Number(table));

@@ -59,4 +59,6 @@ export type MenuPayload = {
   venue: PublicVenue;
   categories: PublicCategory[];
   tableNumber: number | null;
+  /** QR token for `tableNumber`, echoed back on guest actions. */
+  tableToken: string | null;
 };

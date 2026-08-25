@@ -1,3 +1,4 @@
+import { verifyTableToken } from "./guest";
 import { getVenueBySlug, listCategories, listItems, type Item, type Venue } from "./repo";
 import type { MenuPayload, PublicCategory, PublicItem, PublicVenue } from "./public-types";
 
@@ -51,9 +52,19 @@ function toPublicVenue(v: Venue): PublicVenue {
   };
 }
 
-export async function buildMenuPayload(slug: string, tableNumber: number | null): Promise<MenuPayload | null> {
+/**
+ * Builds the guest menu. A table number is only honoured when the QR token
+ * signs it; otherwise the menu renders read-only (no ordering, no waiter call).
+ */
+export async function buildMenuPayload(
+  slug: string,
+  tableNumber: number | null,
+  tableToken: string | null
+): Promise<MenuPayload | null> {
   const venue = await getVenueBySlug(slug);
   if (!venue) return null;
+
+  const signed = tableNumber != null && verifyTableToken(slug, tableNumber, tableToken);
 
   const [categories, items] = await Promise.all([listCategories(venue.id), listItems(venue.id)]);
   const itemsByCat = new Map<string, PublicItem[]>();
@@ -72,5 +83,10 @@ export async function buildMenuPayload(slug: string, tableNumber: number | null)
         children: buildTree(c.id),
       }));
 
-  return { venue: toPublicVenue(venue), categories: buildTree(null), tableNumber };
+  return {
+    venue: toPublicVenue(venue),
+    categories: buildTree(null),
+    tableNumber: signed ? tableNumber : null,
+    tableToken: signed ? tableToken : null,
+  };
 }

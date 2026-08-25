@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ table?: string; lang?: string }>;
+  searchParams: Promise<{ table?: string; t?: string; lang?: string }>;
 };
 
 export default async function MenuPage({ params, searchParams }: Props) {
@@ -15,7 +15,7 @@ export default async function MenuPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const tableNumber = sp.table ? parseInt(sp.table, 10) || null : null;
 
-  const payload = await buildMenuPayload(slug, tableNumber);
+  const payload = await buildMenuPayload(slug, tableNumber, sp.t ?? null);
   if (!payload) notFound();
 
   const lang =
@@ -25,7 +25,8 @@ export default async function MenuPage({ params, searchParams }: Props) {
 
   // Scan analytics — must never break the menu.
   try {
-    const table = tableNumber != null ? await getTableByNumber(payload.venue.id, tableNumber) : null;
+    const table =
+      payload.tableNumber != null ? await getTableByNumber(payload.venue.id, payload.tableNumber) : null;
     await recordScan(payload.venue.id, table?.id ?? null, lang);
   } catch {}
 

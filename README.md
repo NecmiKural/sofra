@@ -108,13 +108,22 @@ See [ROADMAP.md](ROADMAP.md) for what's next.
 |---|---|---|
 | `DATABASE_URL` | `file:../data/sofra.db` | Prisma SQLite connection string. Relative paths resolve from `prisma/`; use an absolute one in containers (`file:/app/data/sofra.db`) |
 | `SESSION_SECRET` | dev fallback | Sign-in cookie secret — set a long random string |
+| `TABLE_TOKEN_SECRET` | `SESSION_SECRET` | Signs the per-table QR tokens. Changing it invalidates printed QR sheets |
 | `BASE_URL` | request host | Used on printable QR sheets |
 | `SEED_DEMO` | unset | Set to `1` to seed the demo venue on container start |
 | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | `admin@sofra.local` / `sofra123` | Seed credentials |
 
-## Security notes (v0.1)
+## Security notes
 
-Tables are addressed by plain numbers in the QR URL. Duplicate open requests are coalesced per table. Signed per-table tokens and rate limiting are planned for v0.2.
+Each table's QR link carries a signed token (`?t=`) derived from `TABLE_TOKEN_SECRET`. Guest
+endpoints reject a table number that arrives without its token, so ordering, waiter calls and
+payments need a real scan rather than a guessed number — an unsigned link still renders the
+menu, just read-only. Guest writes are rate limited per IP and table, and duplicate open
+requests are coalesced per table.
+
+Rate limiting is an in-process fixed window, so it only covers a single instance; the multi-instance
+story lands with the Redis event bus in v1.0. Rotating `TABLE_TOKEN_SECRET` (or `SESSION_SECRET`,
+which it falls back to) invalidates printed QR codes — reprint from **Tables → Print QR sheet**.
 
 ## Contributing
 

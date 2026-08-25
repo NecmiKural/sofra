@@ -1,12 +1,20 @@
 import { guard, json } from "@/lib/api";
+import { guestGate, tableToken } from "@/lib/guest";
 import { getProvider } from "@/lib/payments";
 import { createPayment, getTableByNumber, getVenueBySlug, setPaymentRef, unpaidOrdersForTable } from "@/lib/repo";
 
 /** Guest: create a payment for the table's unpaid orders. */
 export async function POST(req: Request) {
   return guard(async () => {
-    const { slug, table, returnUrl } = (await req.json()) as { slug?: string; table?: number; returnUrl?: string };
+    const { slug, table, returnUrl, t } = (await req.json()) as {
+      slug?: string;
+      table?: number;
+      returnUrl?: string;
+      t?: string;
+    };
     if (!slug || table == null) return json({ error: "bad_request" }, 400);
+    const blocked = guestGate(req, slug, Number(table), t, 6);
+    if (blocked) return blocked;
     const venue = await getVenueBySlug(slug);
     if (!venue) return json({ error: "venue_not_found" }, 404);
     if (!venue.featurePayments) return json({ error: "feature_disabled" }, 403);
@@ -25,7 +33,9 @@ export async function POST(req: Request) {
         amountMinor: amount,
         currency: venue.currency,
         description: `${venue.name} — table ${tableRow.number}`,
-        returnUrl: returnUrl || `/m/${venue.slug}?table=${tableRow.number}`,
+        returnUrl:
+          returnUrl ||
+          `/m/${venue.slug}?table=${tableRow.number}&t=${tableToken(venue.slug, tableRow.number)}`,
       });
       if (providerRef) await setPaymentRef(payment.id, providerRef);
       return json({ paymentId: payment.id, checkoutUrl });

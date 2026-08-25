@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth";
+import { tableToken } from "@/lib/guest";
 import { listTables } from "@/lib/repo";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ export default async function PrintPage() {
 
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
         {tables.map((t) => {
-          const url = `${base}/m/${user.venue.slug}?table=${t.number}`;
+          const url = `${base}/m/${user.venue.slug}?table=${t.number}&t=${tableToken(user.venue.slug, t.number)}`;
           return (
             <div key={t.id} className="break-inside-avoid rounded-2xl border-2 border-black bg-white p-5 text-center text-black">
               <div className="text-sm font-semibold uppercase tracking-widest">{user.venue.name}</div>

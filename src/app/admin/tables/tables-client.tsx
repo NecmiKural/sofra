@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-type TableRow = { id: string; number: number; label: string | null };
+type TableRow = { id: string; number: number; label: string | null; token: string };
 
 export default function TablesClient({ initialTables, slug }: { initialTables: TableRow[]; slug: string }) {
   const [tables, setTables] = useState<TableRow[]>(initialTables);
@@ -12,7 +12,7 @@ export default function TablesClient({ initialTables, slug }: { initialTables: T
 
   useEffect(() => setOrigin(window.location.origin), []);
 
-  const menuUrl = (n: number) => `${origin}/m/${slug}?table=${n}`;
+  const menuUrl = (t: TableRow) => `${origin}/m/${slug}?table=${t.number}&t=${t.token}`;
 
   const add = async () => {
     const res = await fetch("/api/tables", {
@@ -41,7 +41,7 @@ export default function TablesClient({ initialTables, slug }: { initialTables: T
   };
 
   const copy = async (t: TableRow) => {
-    await navigator.clipboard.writeText(menuUrl(t.number));
+    await navigator.clipboard.writeText(menuUrl(t));
     setCopied(t.id);
     setTimeout(() => setCopied(null), 1500);
   };
@@ -65,7 +65,7 @@ export default function TablesClient({ initialTables, slug }: { initialTables: T
             {origin && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`/api/qr?data=${encodeURIComponent(menuUrl(t.number))}&size=256`}
+                src={`/api/qr?data=${encodeURIComponent(menuUrl(t))}&size=256`}
                 alt={`QR table ${t.number}`}
                 className="mx-auto h-36 w-36 rounded-lg bg-white p-1"
               />
@@ -74,7 +74,7 @@ export default function TablesClient({ initialTables, slug }: { initialTables: T
             {t.label && <div className="text-sm muted">{t.label}</div>}
             <div className="mt-2 flex justify-center gap-1.5 text-xs">
               <button onClick={() => copy(t)} className="chip px-2.5 py-1">{copied === t.id ? "✓ Copied" : "Copy link"}</button>
-              <a href={menuUrl(t.number)} target="_blank" className="chip px-2.5 py-1" rel="noreferrer">Open</a>
+              <a href={menuUrl(t)} target="_blank" className="chip px-2.5 py-1" rel="noreferrer">Open</a>
               <button onClick={() => rename(t)} className="chip px-2.5 py-1">✎</button>
               <button onClick={() => remove(t)} className="chip px-2.5 py-1">🗑</button>
             </div>

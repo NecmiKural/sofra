@@ -1,5 +1,6 @@
 import { guard, json } from "@/lib/api";
 import { publish } from "@/lib/bus";
+import { ipLimit } from "@/lib/guest";
 import { getProvider } from "@/lib/payments";
 import { getPayment, getVenueById, markOrdersPaid, setPaymentStatus } from "@/lib/repo";
 
@@ -25,8 +26,10 @@ export async function GET(_req: Request, ctx: Ctx) {
 }
 
 /** Public: confirm the payment (mock provider confirms instantly). */
-export async function POST(_req: Request, ctx: Ctx) {
+export async function POST(req: Request, ctx: Ctx) {
   return guard(async () => {
+    const blocked = ipLimit(req, "payment-confirm", 20);
+    if (blocked) return blocked;
     const { id } = await ctx.params;
     const payment = await getPayment(id);
     if (!payment) return json({ error: "not_found" }, 404);

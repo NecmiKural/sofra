@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "prisma migrate deploy && tsx scripts/seed.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "check:guest": "tsx scripts/check-guest.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
