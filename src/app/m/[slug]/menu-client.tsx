@@ -332,6 +332,23 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
                 </div>
               ))}
               <input className="input" placeholder={t.note} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} />
+              {activeOrderCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCart(false);
+                    setShowOrders(true);
+                  }}
+                  className="card w-full p-3 text-left text-sm"
+                  style={{ borderColor: "var(--venue-primary)" }}
+                >
+                  <span className="font-semibold">⚠️ {t.tableBusy.replace("{n}", String(activeOrderCount))}</span>
+                  <span className="mt-1 block muted">{t.tableBusyHint}</span>
+                  <span className="mt-1 block font-medium underline" style={{ color: "var(--venue-primary)" }}>
+                    {t.viewTableOrders} →
+                  </span>
+                </button>
+              )}
               <button onClick={sendOrder} disabled={busy} className="btn-primary w-full px-4 py-3.5">
                 {t.sendOrder} · {formatMoney(cartTotal, venue.currency, lang)}
               </button>

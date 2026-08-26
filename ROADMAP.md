@@ -7,7 +7,9 @@ to `ghcr.io` and redeploys the live demo.
 
 QR menus per table with signed table tokens, rate limited guest endpoints,
 multilingual menu data, categories and option groups,
-call waiter / request bill, table ordering, pay at the table with a pluggable
+call waiter / request bill, shared table ordering (every phone at a table sees
+the same orders, and staff see the table's tickets grouped so the whole table is
+served together), pay at the table with a pluggable
 provider, printable QR sheets, scan analytics, per-venue theming and feature
 toggles, Docker self-host.
 

@@ -29,7 +29,7 @@ const dict = {
     onTheWay: "Görüldü, geliyor",
     cart: "Sepet",
     order: "Sipariş ver",
-    orders: "Siparişlerim",
+    orders: "Masa siparişleri",
     add: "Ekle",
     remove: "Kaldır",
     total: "Toplam",
@@ -62,6 +62,9 @@ const dict = {
     paymentSuccess: "Ödeme alındı, teşekkürler!",
     paymentFailed: "Ödeme başarısız oldu.",
     billHint: "Personel hesabınızı masanıza getirecek.",
+    tableBusy: "Masanızdan {n} sipariş şu an hazırlanıyor.",
+    tableBusyHint: "Aynı şeyi iki kez ısmarlamamak için önce masanın siparişlerine bakın.",
+    viewTableOrders: "Masanın siparişlerini gör",
   },
   en: {
     menu: "MENU",
@@ -74,7 +77,7 @@ const dict = {
     onTheWay: "Seen, on the way",
     cart: "Cart",
     order: "Order",
-    orders: "My orders",
+    orders: "Table orders",
     add: "Add",
     remove: "Remove",
     total: "Total",
@@ -107,6 +110,9 @@ const dict = {
     paymentSuccess: "Payment received, thank you!",
     paymentFailed: "Payment failed.",
     billHint: "Staff will bring the bill to your table.",
+    tableBusy: "{n} order(s) from your table are being prepared.",
+    tableBusyHint: "Check the table's orders first so nothing gets ordered twice.",
+    viewTableOrders: "View table orders",
   },
 } as const;
 

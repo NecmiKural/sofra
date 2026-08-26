@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { tj } from "@/lib/i18n";
+import { groupOrdersByTable, type OrderGroup } from "@/lib/table-orders";
 import { formatMoney } from "@/lib/money";
 
 type Req = { id: string; tableNumber: number | null; type: string; status: string; createdAt: number };
@@ -133,6 +134,7 @@ export default function LivePanel({
   };
 
   const activeOrders = orders.filter((o) => o.status === "new" || o.status === "in_progress");
+  const orderGroups = groupOrdersByTable(activeOrders);
   const doneOrders = orders.filter((o) => o.status === "done" || o.status === "cancelled").slice(0, 10);
 
   return (
@@ -184,8 +186,8 @@ export default function LivePanel({
           <h2 className="mb-3 font-semibold">🛒 Orders {activeOrders.length > 0 && `(${activeOrders.length})`}</h2>
           <div className="space-y-3">
             {activeOrders.length === 0 && <p className="card p-4 text-sm muted">No active orders.</p>}
-            {activeOrders.map((o) => (
-              <OrderCard key={o.id} order={o} currency={currency} lang={defaultLang} onPatch={patchOrder} />
+            {orderGroups.map((g) => (
+              <TableGroupCard key={g.key} group={g} currency={currency} lang={defaultLang} onPatch={patchOrder} />
             ))}
             {doneOrders.length > 0 && (
               <details className="card p-3 text-sm">
@@ -226,6 +228,53 @@ export default function LivePanel({
             ))}
           </div>
         </section>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One table's tickets, kept together so the whole table is served at once.
+ * A table with a single ticket renders as a plain card, no extra chrome.
+ */
+function TableGroupCard({
+  group,
+  currency,
+  lang,
+  onPatch,
+}: {
+  group: OrderGroup<Ord>;
+  currency: string;
+  lang: string;
+  onPatch: (id: string, status: string) => void;
+}) {
+  if (group.orders.length === 1) {
+    return <OrderCard order={group.orders[0]} currency={currency} lang={lang} onPatch={onPatch} />;
+  }
+  const patchAll = (status: string) => group.orders.forEach((o) => onPatch(o.id, status));
+  return (
+    <div className="rounded-2xl border-2 p-2" style={{ borderColor: "var(--venue-primary)" }}>
+      <div className="flex items-center justify-between px-2 pt-1">
+        <span className="text-lg font-bold">
+          Table {group.tableNumber ?? "?"} · {group.orders.length} tickets
+        </span>
+        <span className="text-xs muted">first {ago(group.oldest)}</span>
+      </div>
+      <p className="px-2 pb-2 text-xs muted">
+        Serve together · {formatMoney(group.totalMinor, currency, lang)}
+      </p>
+      <div className="space-y-2">
+        {group.orders.map((o) => (
+          <OrderCard key={o.id} order={o} currency={currency} lang={lang} onPatch={onPatch} />
+        ))}
+      </div>
+      <div className="mt-2 flex gap-2 px-2 pb-1">
+        <button onClick={() => patchAll("in_progress")} className="btn-ghost flex-1 px-3 py-1.5 text-sm">
+          👨‍🍳 Start all
+        </button>
+        <button onClick={() => patchAll("done")} className="btn-primary flex-1 px-3 py-1.5 text-sm">
+          ✓ All done
+        </button>
       </div>
     </div>
   );
