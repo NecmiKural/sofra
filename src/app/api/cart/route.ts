@@ -1,4 +1,5 @@
 import { guard, json } from "@/lib/api";
+import { publish } from "@/lib/bus";
 import { guestGate, verifyTableToken } from "@/lib/guest";
 import {
   addCartLine,
@@ -29,8 +30,9 @@ type Body = {
 };
 
 /** Resolves the venue and table behind a guest request, or an error Response.
- * Draft carts are never published onto the live bus: staff must not see a
- * table's half-built cart as if it were an order. */
+ * A cart edit is announced on the bus as a bare `cart.updated` for this table,
+ * which only the table's own phones are subscribed to. Staff never see a
+ * half-built cart as if it were an order. */
 async function resolveTable(slug: string, table: number) {
   const venue = await getVenueBySlug(slug);
   if (!venue) return { error: json({ error: "venue_not_found" }, 404) };
@@ -73,6 +75,7 @@ export async function POST(req: Request) {
         qty: Number(body.qty) || 1,
         choiceIds: Array.isArray(body.choiceIds) ? body.choiceIds.slice(0, 20) : [],
       });
+      publish(resolved.venue.id, { kind: "cart.updated", tableId: resolved.tableRow.id });
       return json(cart);
     } catch (e) {
       if (e instanceof Error && (e.message === "item_not_found" || e.message === "cart_full")) {
@@ -97,6 +100,7 @@ export async function PATCH(req: Request) {
     if ("error" in resolved) return resolved.error;
 
     const cart = await setCartLineQty(resolved.venue.id, resolved.tableRow.id, body.lineId, Number(body.qty));
+    publish(resolved.venue.id, { kind: "cart.updated", tableId: resolved.tableRow.id });
     return json(cart);
   });
 }
@@ -113,6 +117,7 @@ export async function DELETE(req: Request) {
     if ("error" in resolved) return resolved.error;
 
     await clearTableCart(resolved.venue.id, resolved.tableRow.id);
+    publish(resolved.venue.id, { kind: "cart.updated", tableId: resolved.tableRow.id });
     return json([]);
   });
 }

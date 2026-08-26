@@ -24,10 +24,13 @@ Demo ücretsiz bir instance üzerinde çalışır: 15 dakika hareketsizlikten so
 - **Seçenek grupları:** kendi fiyatlı porsiyonlar, ücretli ekstralar, boyutlar, şeker seviyesi
 - **Canlı masa aksiyonları:** garson çağır & hesap iste, SSE ile panele anında düşer
 - **Ortak masa siparişi:** sepet telefona değil masaya ait. Aynı masadakiler kendi
-  cihazından ekler, hepsi aynı satırları görür ve masa tek sipariş gönderir; böylece
-  mutfak aynı masanın yemeklerini ayrı ayrı fiş olarak görmez. Not, sunucu tarafında
-  fiyatlama, canlı sipariş durumu
+  cihazından ekler, değişiklik herkesin ekranında anında belirir ve masa tek sipariş
+  gönderir; böylece mutfak aynı masanın yemeklerini ayrı ayrı fiş olarak görmez.
+  Not, sunucu tarafında fiyatlama, canlı sipariş durumu
 - **Masada ödeme:** takılabilir ödeme katmanı; demo sağlayıcı hazır, Stripe/iyzico adaptörleri yol haritasında
+- **Masadan ödeme, birlikte ya da ayrı ayrı:** hesabın tamamı tek seferde, eşit
+  bölüşme, ya da kişinin kendi girdiği tutar. Herkes kendi telefonundan öder,
+  kalan tutar masadaki herkeste anında güncellenir
 - **Özellik anahtarları:** garson / hesap / sipariş / ödeme işletme bazında açılıp kapanır
 - **Tema:** işletmeye özel marka rengi, açık / koyu / otomatik
 - **Yazdırılabilir QR sayfası:** masa başına kart, laminasyona hazır

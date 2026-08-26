@@ -13,7 +13,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     if (!status || !["open", "acked", "resolved"].includes(status)) return json({ error: "bad_status" }, 400);
     const request = await setRequestStatus(id, user.venueId, status);
     if (!request) return json({ error: "not_found" }, 404);
-    publish(user.venueId, { kind: "request.updated", data: request });
+    publish(user.venueId, { kind: "request.updated", tableId: request.tableId, data: request });
     return json(request);
   });
 }

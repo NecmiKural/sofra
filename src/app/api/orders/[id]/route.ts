@@ -15,7 +15,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     }
     const order = await setOrderStatus(id, user.venueId, status);
     if (!order) return json({ error: "not_found" }, 404);
-    publish(user.venueId, { kind: "order.updated", data: order });
+    publish(user.venueId, { kind: "order.updated", tableId: order.tableId, data: order });
     return json(order);
   });
 }

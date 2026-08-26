@@ -14,6 +14,7 @@ import type {
   Payment as PaymentRecord,
 } from "@prisma/client";
 import { prisma } from "./db";
+import { allocatePayment, summarizeBill, type TableBill } from "./bill";
 import { normalizeQty, packChoiceIds, priceLine, unpackChoiceIds } from "./pricing";
 
 /* ---------------- types ---------------- */
@@ -120,6 +121,8 @@ export type OrderRow = {
   status: string;
   totalMinor: number;
   note: string | null;
+  /** Settled so far. Equals totalMinor once `paid` is true. */
+  paidMinor: number;
   paid: boolean;
   createdAt: number;
   items: OrderItemRow[];
@@ -484,7 +487,8 @@ function mapOrder(r: OrderRecord): OrderRow {
   return {
     id: r.id, venueId: r.venueId, tableId: r.tableId,
     tableNumber: r.table?.number ?? null,
-    status: r.status, totalMinor: r.totalMinor, note: r.note, paid: r.paid,
+    status: r.status, totalMinor: r.totalMinor, note: r.note,
+    paidMinor: r.paidMinor, paid: r.paid,
     createdAt: r.createdAt.getTime(),
     items: r.items.map((i) => ({
       id: i.id, nameSnap: i.nameSnap, qty: i.qty,
@@ -728,9 +732,57 @@ export async function unpaidOrdersForTable(venueId: string, tableId: string): Pr
   return rows.map(mapOrder);
 }
 
-export async function markOrdersPaid(orderIds: string[]) {
-  if (!orderIds.length) return;
-  await prisma.order.updateMany({ where: { id: { in: orderIds } }, data: { paid: true } });
+export type { TableBill };
+
+/**
+ * What the table owes right now. Scoped to the same eight hours the guest's
+ * order list uses, so the number on the bill button always matches the orders
+ * printed above it.
+ */
+export async function getTableBill(venueId: string, tableId: string): Promise<TableBill> {
+  const orders = await prisma.order.findMany({
+    where: { venueId, tableId, status: { not: "cancelled" }, createdAt: { gt: since8h() } },
+    select: { totalMinor: true, paidMinor: true },
+  });
+  return summarizeBill(orders);
+}
+
+/**
+ * Spread a settled payment over the table's outstanding orders, oldest first.
+ * Splitting the bill means an amount rarely lines up with an order, so an
+ * order is only flipped to paid once its own total is fully covered.
+ *
+ * Returns how much of the payment actually landed on the bill. Anything left
+ * over means the table was already settled while this payment was in flight;
+ * the money is still recorded on the payment row for the venue to refund.
+ */
+export async function applyPaymentToTable(
+  venueId: string,
+  tableId: string,
+  amountMinor: number
+): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const orders = await tx.order.findMany({
+      where: {
+        venueId,
+        tableId,
+        paid: false,
+        status: { not: "cancelled" },
+        createdAt: { gt: since8h() },
+      },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, totalMinor: true, paidMinor: true },
+    });
+
+    const { allocations, applied } = allocatePayment(orders, amountMinor);
+    for (const a of allocations) {
+      await tx.order.update({
+        where: { id: a.order.id },
+        data: { paidMinor: a.paidMinor, paid: a.paid },
+      });
+    }
+    return applied;
+  });
 }
 
 /* ---------------- payments ---------------- */

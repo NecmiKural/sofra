@@ -6,8 +6,14 @@ export type LiveEvent = {
     | "request.updated"
     | "order.created"
     | "order.updated"
-    | "payment.updated";
-  data: unknown;
+    | "payment.updated"
+    | "cart.updated";
+  /**
+   * The table this event belongs to, when it has one. The staff stream ignores
+   * it; the guest stream uses it to forward a table only its own news.
+   */
+  tableId?: string | null;
+  data?: unknown;
 };
 
 const globalForBus = globalThis as unknown as { sofraBus?: EventEmitter };

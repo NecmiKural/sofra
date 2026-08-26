@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
     try {
       const order = await placeTableOrder(venue.id, tableRow.id, body.note?.slice(0, 200));
-      publish(venue.id, { kind: "order.created", data: order });
+      publish(venue.id, { kind: "order.created", tableId: tableRow.id, data: order });
       return json(order);
     } catch (e) {
       // Losing the race against another phone at the same table lands here too:
@@ -57,6 +57,7 @@ export async function GET(req: Request) {
         status: o.status,
         paid: o.paid,
         totalMinor: o.totalMinor,
+        paidMinor: o.paidMinor,
         createdAt: o.createdAt,
         items: o.items.map((i) => ({ nameSnap: i.nameSnap, qty: i.qty, choicesSnap: i.choicesSnap })),
       }))

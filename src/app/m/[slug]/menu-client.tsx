@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MenuPayload, PublicCategory, PublicItem } from "@/lib/public-types";
 import { guestDict, tj } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
+import { summarizeBill } from "@/lib/bill";
 import { priceLine } from "@/lib/pricing";
+import BillPanel from "./bill-panel";
 
 /** A line of the table's shared cart, as the server reports it. */
 type CartLine = {
@@ -24,6 +26,7 @@ type LiveOrder = {
   status: string;
   paid: boolean;
   totalMinor: number;
+  paidMinor: number;
   createdAt: string;
   items: { nameSnap: string; qty: number; choicesSnap: string }[];
 };
@@ -107,17 +110,64 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
     [venue.slug, tableNumber, tableToken, flash, t]
   );
 
-  useEffect(() => {
+  const refreshAll = useCallback(() => {
     refreshRequests();
     refreshOrders();
     refreshCart();
-    const iv = setInterval(() => {
-      refreshRequests();
-      refreshOrders();
-      refreshCart();
-    }, 6000);
-    return () => clearInterval(iv);
   }, [refreshRequests, refreshOrders, refreshCart]);
+
+  /**
+   * Live stream for this table. A phone that changes the shared cart makes
+   * every other phone at the table refetch within the same second, which is
+   * the difference between a shared cart and a cart that merely catches up.
+   *
+   * The stream only says *what* changed; the data still comes from the
+   * endpoints this phone is allowed to read.
+   */
+  useEffect(() => {
+    if (!tableNumber || !tableToken) return;
+    let source: EventSource | null = null;
+    let retry: ReturnType<typeof setTimeout> | null = null;
+    let backoffMs = 2000;
+    let closed = false;
+
+    const connect = () => {
+      source = new EventSource(`/api/table-events?slug=${venue.slug}&table=${tableNumber}&t=${tableToken}`);
+      source.onopen = () => {
+        backoffMs = 2000;
+      };
+      source.onmessage = (msg) => {
+        try {
+          const { kind } = JSON.parse(msg.data) as { kind: string };
+          if (kind === "cart.updated") refreshCart();
+          else if (kind.startsWith("order.") || kind === "payment.updated") refreshOrders();
+          else if (kind.startsWith("request.")) refreshRequests();
+        } catch {}
+      };
+      source.onerror = () => {
+        source?.close();
+        if (closed) return;
+        // Back off so a venue full of phones cannot hammer a struggling server.
+        retry = setTimeout(connect, backoffMs);
+        backoffMs = Math.min(backoffMs * 2, 30000);
+      };
+    };
+    connect();
+
+    return () => {
+      closed = true;
+      source?.close();
+      if (retry) clearTimeout(retry);
+    };
+  }, [venue.slug, tableNumber, tableToken, refreshCart, refreshOrders, refreshRequests]);
+
+  // Safety net for a dropped stream, and the only sync path when SSE is
+  // blocked by a proxy. The stream carries the fast path.
+  useEffect(() => {
+    refreshAll();
+    const iv = setInterval(refreshAll, 20000);
+    return () => clearInterval(iv);
+  }, [refreshAll]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -188,15 +238,16 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
     }
   };
 
-  const payOnline = async () => {
-    if (!tableNumber) return;
+  /** `amountMinor` is the share this phone is paying, not always the whole bill. */
+  const payOnline = async (amountMinor: number) => {
+    if (!tableNumber || amountMinor <= 0) return;
     setBusy(true);
     try {
       const returnUrl = `${window.location.origin}/m/${venue.slug}?table=${tableNumber}&t=${tableToken}&lang=${lang}&paid=1`;
       const res = await fetch("/api/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: venue.slug, table: tableNumber, returnUrl, t: tableToken }),
+        body: JSON.stringify({ slug: venue.slug, table: tableNumber, returnUrl, t: tableToken, amountMinor }),
       });
       const data = await res.json();
       if (res.ok && data.checkoutUrl) window.location.href = data.checkoutUrl;
@@ -208,9 +259,9 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
 
   const cartCount = cart.reduce((s, l) => s + l.qty, 0);
   const cartTotal = cart.reduce((s, l) => s + l.qty * l.unitMinor, 0);
-  const unpaidTotal = orders
-    .filter((o) => !o.paid && o.status !== "cancelled")
-    .reduce((s, o) => s + o.totalMinor, 0);
+  // The bill is settled by amount, not order by order: a split payment covers
+  // part of the table rather than picking someone's plate off the list.
+  const bill = summarizeBill(orders);
   const waiterReq = requests.find((r) => r.type === "waiter");
   const billReq = requests.find((r) => r.type === "bill");
   const activeOrderCount = orders.filter((o) => o.status === "new" || o.status === "in_progress").length;
@@ -428,10 +479,18 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
                   </ul>
                 </div>
               ))}
-              {venue.featurePayments && unpaidTotal > 0 && (
-                <button onClick={payOnline} disabled={busy} className="btn-primary w-full px-4 py-3.5">
-                  💳 {t.payOnline} · {formatMoney(unpaidTotal, venue.currency, lang)}
-                </button>
+              {venue.featurePayments && bill.remainingMinor > 0 && (
+                <BillPanel
+                  bill={bill}
+                  currency={venue.currency}
+                  lang={lang}
+                  t={t}
+                  busy={busy}
+                  onPay={payOnline}
+                />
+              )}
+              {venue.featurePayments && bill.totalMinor > 0 && bill.remainingMinor === 0 && (
+                <p className="card p-3 text-center text-sm font-semibold">{t.billSettled}</p>
               )}
             </div>
           )}

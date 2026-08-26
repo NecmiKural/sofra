@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     if (!tableRow) return json({ error: "table_not_found" }, 404);
 
     const request = await createRequest(venue.id, tableRow.id, type);
-    publish(venue.id, { kind: "request.created", data: request });
+    publish(venue.id, { kind: "request.created", tableId: request.tableId, data: request });
     return json(request);
   });
 }

@@ -187,6 +187,10 @@ model Order {
   status     String   @default("new")
   totalMinor Int
   note       String?
+  /// How much of this order has been settled. A table may pay its bill in
+  /// several goes (split evenly, or one guest covering part of it), so paid
+  /// is not a plain yes/no until the last kuruş lands.
+  paidMinor  Int      @default(0)
   paid       Boolean  @default(false)
   createdAt  DateTime @default(now())
 

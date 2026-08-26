@@ -2,7 +2,7 @@ import { guard, json } from "@/lib/api";
 import { publish } from "@/lib/bus";
 import { ipLimit } from "@/lib/guest";
 import { getProvider } from "@/lib/payments";
-import { getPayment, getVenueById, markOrdersPaid, setPaymentStatus } from "@/lib/repo";
+import { applyPaymentToTable, getPayment, getTableByNumber, getVenueById, setPaymentStatus } from "@/lib/repo";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -39,9 +39,17 @@ export async function POST(req: Request, ctx: Ctx) {
     const { ok } = await provider.confirm(payment.id, payment.providerRef);
     const updated = await setPaymentStatus(payment.id, ok ? "paid" : "failed");
     if (ok) {
-      const orderIds = payment.orderIds.split(",").filter(Boolean);
-      await markOrdersPaid(orderIds);
-      publish(payment.venueId, { kind: "payment.updated", data: updated });
+      // Resolved so the table's own phones see the bill drop straight away.
+      const tableRow =
+        payment.tableNumber != null ? await getTableByNumber(payment.venueId, payment.tableNumber) : null;
+      if (tableRow) {
+        const applied = await applyPaymentToTable(payment.venueId, tableRow.id, payment.amountMinor);
+        if (applied < payment.amountMinor) {
+          // The table was settled by someone else while this checkout was open.
+          console.warn("[sofra] payment", payment.id, "overpaid by", payment.amountMinor - applied);
+        }
+      }
+      publish(payment.venueId, { kind: "payment.updated", tableId: tableRow?.id ?? null, data: updated });
     }
     return json({ status: updated?.status ?? "failed" });
   });
