@@ -61,16 +61,23 @@ function clientIp(req: Request): string {
  * Guard for guest write endpoints: the QR token must match the table, and the
  * device may only act a handful of times per minute. Returns an error Response
  * to hand straight back, or null when the request may proceed.
+ *
+ * `scope` keeps each endpoint in its own bucket. Editing a shared cart is a
+ * tap-by-tap activity while placing an order is not, so they cannot draw on
+ * one counter without the busy one starving the other.
  */
 export function guestGate(
   req: Request,
   slug: string,
   table: number,
   token: string | null | undefined,
-  limit: number
+  limit: number,
+  scope: string
 ): Response | null {
   if (!verifyTableToken(slug, table, token)) return json({ error: "invalid_table_token" }, 403);
-  if (!rateLimit(`${clientIp(req)}:${slug}:${table}`, limit)) return json({ error: "rate_limited" }, 429);
+  if (!rateLimit(`${clientIp(req)}:${slug}:${table}:${scope}`, limit)) {
+    return json({ error: "rate_limited" }, 429);
+  }
   return null;
 }
 

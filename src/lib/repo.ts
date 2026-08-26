@@ -14,6 +14,7 @@ import type {
   Payment as PaymentRecord,
 } from "@prisma/client";
 import { prisma } from "./db";
+import { normalizeQty, packChoiceIds, priceLine, unpackChoiceIds } from "./pricing";
 
 /* ---------------- types ---------------- */
 
@@ -494,68 +495,196 @@ function mapOrder(r: OrderRecord): OrderRow {
 
 export type OrderLineInput = { itemId: string; qty: number; choiceIds?: string[] };
 
-export async function createOrder(
+type PricedLine = { itemId: string; nameSnap: string; qty: number; unitPriceMinor: number; choicesSnap: string };
+
+/**
+ * Price requested lines against the menu. The client's numbers are never
+ * trusted: only the item id and quantity survive the trip. Unknown or
+ * unavailable items are dropped rather than guessed at.
+ */
+async function priceOrderLines(
+  client: Prisma.TransactionClient,
   venueId: string,
-  tableId: string,
-  lines: OrderLineInput[],
-  note?: string
-): Promise<OrderRow> {
-  // Prices always come from the database. The client's numbers are never trusted.
+  lines: OrderLineInput[]
+): Promise<{ total: number; rows: PricedLine[] }> {
   const ids = [...new Set(lines.map((l) => l.itemId).filter((v): v is string => typeof v === "string"))];
   const records = ids.length
-    ? await prisma.menuItem.findMany({ where: { id: { in: ids }, venueId }, include: ITEM_INCLUDE })
+    ? await client.menuItem.findMany({ where: { id: { in: ids }, venueId }, include: ITEM_INCLUDE })
     : [];
   const byId = new Map(records.map((r) => [r.id, mapItem(r)]));
 
   let total = 0;
-  const itemRows: { nameSnap: string; qty: number; unit: number; choicesSnap: string; itemId: string }[] = [];
+  const rows: PricedLine[] = [];
 
   for (const line of lines) {
     const item = byId.get(line.itemId);
     if (!item || !item.available) continue;
-    const qty = Math.max(1, Math.min(50, Math.round(line.qty || 1)));
-    let base = item.priceMinor;
-    let delta = 0;
-    const chosen: string[] = [];
-    const choiceIds = line.choiceIds ?? [];
-    for (const g of item.optionGroups) {
-      for (const c of g.choices) {
-        if (choiceIds.includes(c.id)) {
-          chosen.push(c.nameJson);
-          if (c.priceAbsolute != null) base = c.priceAbsolute;
-          else delta += c.priceDelta;
-        }
-      }
-    }
-    const unit = base + delta;
-    total += unit * qty;
-    itemRows.push({ nameSnap: item.nameJson, qty, unit, choicesSnap: chosen.length ? JSON.stringify(chosen) : "", itemId: item.id });
+    const qty = normalizeQty(line.qty);
+    const { unitMinor, choiceNames } = priceLine(item, line.choiceIds ?? []);
+    total += unitMinor * qty;
+    rows.push({
+      itemId: item.id,
+      nameSnap: item.nameJson,
+      qty,
+      unitPriceMinor: unitMinor,
+      choicesSnap: choiceNames.length ? JSON.stringify(choiceNames) : "",
+    });
   }
 
-  if (itemRows.length === 0) throw new Error("empty_order");
+  return { total, rows };
+}
 
-  // A nested create writes the order and its lines in one transaction.
-  const order = await prisma.order.create({
+async function writeOrder(
+  client: Prisma.TransactionClient,
+  venueId: string,
+  tableId: string,
+  priced: { total: number; rows: PricedLine[] },
+  note?: string
+): Promise<OrderRow> {
+  if (priced.rows.length === 0) throw new Error("empty_order");
+  // A nested create writes the order and its lines together.
+  const order = await client.order.create({
     data: {
       venueId,
       tableId,
       status: "new",
-      totalMinor: total,
+      totalMinor: priced.total,
       note: note ?? null,
       paid: false,
-      items: {
-        create: itemRows.map((r) => ({
-          itemId: r.itemId,
-          nameSnap: r.nameSnap,
-          qty: r.qty,
-          unitPriceMinor: r.unit,
-          choicesSnap: r.choicesSnap,
-        })),
-      },
+      items: { create: priced.rows },
     },
     include: ORDER_INCLUDE,
   });
   return mapOrder(order);
+}
+
+/* ---------------- shared table cart ---------------- */
+
+export type CartLineRow = {
+  id: string;
+  itemId: string;
+  nameJson: string;
+  qty: number;
+  unitMinor: number;
+  choiceIds: string[];
+  choiceNames: string[];
+  addedAt: number;
+};
+
+const CART_INCLUDE = Prisma.validator<Prisma.CartLineInclude>()({ item: { include: ITEM_INCLUDE } });
+type CartRecord = Prisma.CartLineGetPayload<{ include: typeof CART_INCLUDE }>;
+
+/** One table may not hoard the database with an endless draft. */
+const MAX_CART_LINES = 40;
+
+function mapCartLine(r: CartRecord): CartLineRow {
+  const item = mapItem(r.item);
+  const choiceIds = unpackChoiceIds(r.choiceIds);
+  const { unitMinor, choiceNames } = priceLine(item, choiceIds);
+  return {
+    id: r.id,
+    itemId: item.id,
+    nameJson: item.nameJson,
+    qty: r.qty,
+    unitMinor,
+    choiceIds,
+    choiceNames,
+    addedAt: r.createdAt.getTime(),
+  };
+}
+
+/**
+ * The table's shared draft, oldest line first. Prices are recomputed from the
+ * menu on every read, so a price change mid-meal cannot be locked in by
+ * leaving a phone open on the cart screen.
+ */
+export async function listTableCart(venueId: string, tableId: string): Promise<CartLineRow[]> {
+  const rows = await prisma.cartLine.findMany({
+    where: { venueId, tableId },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    include: CART_INCLUDE,
+  });
+  // An item pulled from the menu mid-meal disappears from the draft as well.
+  return rows.filter((r) => r.item.available).map(mapCartLine);
+}
+
+export async function addCartLine(
+  venueId: string,
+  tableId: string,
+  input: OrderLineInput
+): Promise<CartLineRow[]> {
+  const record = await prisma.menuItem.findFirst({
+    where: { id: input.itemId, venueId, available: true },
+    include: ITEM_INCLUDE,
+  });
+  if (!record) throw new Error("item_not_found");
+  if ((await prisma.cartLine.count({ where: { venueId, tableId } })) >= MAX_CART_LINES) {
+    throw new Error("cart_full");
+  }
+
+  // Only choices that belong to this item are stored.
+  const item = mapItem(record);
+  const known = new Set(item.optionGroups.flatMap((g) => g.choices.map((c) => c.id)));
+  const choiceIds = (input.choiceIds ?? []).filter((id) => known.has(id));
+
+  await prisma.cartLine.create({
+    data: {
+      venueId,
+      tableId,
+      itemId: item.id,
+      qty: normalizeQty(input.qty),
+      choiceIds: packChoiceIds(choiceIds),
+    },
+  });
+  return listTableCart(venueId, tableId);
+}
+
+/** Set a line's quantity. Zero or less removes it. Scoped to the table so one
+ * table's QR can never touch another table's draft. */
+export async function setCartLineQty(
+  venueId: string,
+  tableId: string,
+  lineId: string,
+  qty: number
+): Promise<CartLineRow[]> {
+  if (qty <= 0) {
+    await prisma.cartLine.deleteMany({ where: { id: lineId, venueId, tableId } });
+  } else {
+    await prisma.cartLine.updateMany({
+      where: { id: lineId, venueId, tableId },
+      data: { qty: normalizeQty(qty) },
+    });
+  }
+  return listTableCart(venueId, tableId);
+}
+
+export async function clearTableCart(venueId: string, tableId: string): Promise<void> {
+  await prisma.cartLine.deleteMany({ where: { venueId, tableId } });
+}
+
+/**
+ * Turn the table's shared cart into one order. The draft rows are claimed
+ * inside the transaction, so two phones pressing send at the same moment
+ * cannot order the same food twice: the loser finds the cart already empty.
+ */
+export async function placeTableOrder(venueId: string, tableId: string, note?: string): Promise<OrderRow> {
+  return prisma.$transaction(async (tx) => {
+    const lines = await tx.cartLine.findMany({
+      where: { venueId, tableId },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
+    if (lines.length === 0) throw new Error("empty_order");
+
+    const claimed = await tx.cartLine.deleteMany({ where: { id: { in: lines.map((l) => l.id) } } });
+    if (claimed.count !== lines.length) throw new Error("empty_order");
+
+    const priced = await priceOrderLines(
+      tx,
+      venueId,
+      lines.map((l) => ({ itemId: l.itemId, qty: l.qty, choiceIds: unpackChoiceIds(l.choiceIds) }))
+    );
+    return writeOrder(tx, venueId, tableId, priced, note);
+  });
 }
 
 export async function getOrder(id: string, venueId: string): Promise<OrderRow | null> {

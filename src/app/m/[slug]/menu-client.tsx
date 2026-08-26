@@ -1,18 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MenuPayload, PublicCategory, PublicItem } from "@/lib/public-types";
 import { guestDict, tj } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
+import { priceLine } from "@/lib/pricing";
 
+/** A line of the table's shared cart, as the server reports it. */
 type CartLine = {
-  key: string;
+  id: string;
   itemId: string;
   nameJson: string;
   qty: number;
   unitMinor: number;
   choiceIds: string[];
   choiceNames: string[]; // nameJson strings
+  addedAt: number;
 };
 
 type LiveRequest = { id: string; type: string; status: string };
@@ -39,6 +42,9 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
   const [requests, setRequests] = useState<LiveRequest[]>([]);
   const [orders, setOrders] = useState<LiveOrder[]>([]);
   const [busy, setBusy] = useState(false);
+  /** Cart writes answer with the whole cart, so a poll landing mid-write would
+   *  undo what this phone just did. Skip the poll while a write is open. */
+  const pendingWrites = useRef(0);
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -61,15 +67,57 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
     } catch {}
   }, [venue.slug, tableNumber, tableToken, venue.featureOrdering]);
 
+  const refreshCart = useCallback(async () => {
+    if (!tableNumber || !venue.featureOrdering) return;
+    if (pendingWrites.current > 0) return;
+    try {
+      const res = await fetch(`/api/cart?slug=${venue.slug}&table=${tableNumber}&t=${tableToken}`);
+      if (res.ok) setCart(await res.json());
+    } catch {}
+  }, [venue.slug, tableNumber, tableToken, venue.featureOrdering]);
+
+  /**
+   * Send one cart edit and adopt the answer. The endpoint returns the table's
+   * whole cart, so every phone converges on the same lines without any
+   * merge logic on the client.
+   */
+  const writeCart = useCallback(
+    async (method: "POST" | "PATCH" | "DELETE", body: Record<string, unknown>): Promise<boolean> => {
+      pendingWrites.current++;
+      try {
+        const res = await fetch("/api/cart", {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug: venue.slug, table: tableNumber, t: tableToken, ...body }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setCart(data as CartLine[]);
+          return true;
+        }
+        flash(data.error === "cart_full" ? t.cartFull : t.cartFailed);
+        return false;
+      } catch {
+        flash(t.cartFailed);
+        return false;
+      } finally {
+        pendingWrites.current--;
+      }
+    },
+    [venue.slug, tableNumber, tableToken, flash, t]
+  );
+
   useEffect(() => {
     refreshRequests();
     refreshOrders();
+    refreshCart();
     const iv = setInterval(() => {
       refreshRequests();
       refreshOrders();
+      refreshCart();
     }, 6000);
     return () => clearInterval(iv);
-  }, [refreshRequests, refreshOrders]);
+  }, [refreshRequests, refreshOrders, refreshCart]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -100,39 +148,25 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
     }
   };
 
-  const addToCart = (item: PublicItem, choiceIds: string[], qty: number) => {
-    const { unit, names } = priceFor(item, choiceIds);
-    setCart((prev) => [
-      ...prev,
-      {
-        key: `${item.id}-${Date.now()}`,
-        itemId: item.id,
-        nameJson: item.nameJson,
-        qty,
-        unitMinor: unit,
-        choiceIds,
-        choiceNames: names,
-      },
-    ]);
+  const addToCart = async (item: PublicItem, choiceIds: string[], qty: number) => {
     setActiveItem(null);
-    flash(`${tj(item.nameJson, lang)} ✓`);
+    if (await writeCart("POST", { itemId: item.id, qty, choiceIds })) {
+      flash(`${tj(item.nameJson, lang)} ✓`);
+    }
   };
 
   const sendOrder = async () => {
     if (!tableNumber || cart.length === 0) return;
     setBusy(true);
     try {
+      // The lines come from the table's cart on the server, not from this
+      // phone: whatever everyone added goes to the kitchen as one order.
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          slug: venue.slug,
-          table: tableNumber,
-          t: tableToken,
-          note: note || undefined,
-          items: cart.map((l) => ({ itemId: l.itemId, qty: l.qty, choiceIds: l.choiceIds })),
-        }),
+        body: JSON.stringify({ slug: venue.slug, table: tableNumber, t: tableToken, note: note || undefined }),
       });
+      const data = await res.json();
       if (res.ok) {
         setCart([]);
         setNote("");
@@ -140,7 +174,15 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
         flash(t.orderSent);
         refreshOrders();
         setShowOrders(true);
+      } else {
+        // An empty cart here usually means someone else at the table pressed
+        // send a moment earlier and the order is already on its way.
+        flash(data.error === "empty_order" ? t.cartAlreadySent : t.orderFailed);
+        refreshCart();
+        refreshOrders();
       }
+    } catch {
+      flash(t.orderFailed);
     } finally {
       setBusy(false);
     }
@@ -312,8 +354,9 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
             <p className="muted">{t.empty}</p>
           ) : (
             <div className="space-y-3">
+              <p className="text-xs muted">👥 {t.cartShared}</p>
               {cart.map((l) => (
-                <div key={l.key} className="card flex items-center gap-3 p-3">
+                <div key={l.id} className="card flex items-center gap-3 p-3">
                   <div className="flex-1">
                     <div className="font-medium">{tj(l.nameJson, lang)}</div>
                     {l.choiceNames.length > 0 && (
@@ -325,9 +368,14 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
                   </div>
                   <QtyControl
                     qty={l.qty}
-                    onChange={(q) =>
-                      setCart((prev) => (q <= 0 ? prev.filter((x) => x.key !== l.key) : prev.map((x) => (x.key === l.key ? { ...x, qty: q } : x))))
-                    }
+                    onChange={(q) => {
+                      // Echo locally first so the tap feels instant, then let
+                      // the server's answer settle it for every phone.
+                      setCart((prev) =>
+                        q <= 0 ? prev.filter((x) => x.id !== l.id) : prev.map((x) => (x.id === l.id ? { ...x, qty: q } : x))
+                      );
+                      writeCart("PATCH", { lineId: l.id, qty: q });
+                    }}
                   />
                 </div>
               ))}
@@ -394,22 +442,6 @@ export default function GuestMenu({ payload, initialLang }: { payload: MenuPaylo
 }
 
 /* ---------- helpers & subcomponents ---------- */
-
-function priceFor(item: PublicItem, choiceIds: string[]): { unit: number; names: string[] } {
-  let base = item.priceMinor;
-  let delta = 0;
-  const names: string[] = [];
-  for (const g of item.optionGroups) {
-    for (const c of g.choices) {
-      if (choiceIds.includes(c.id)) {
-        names.push(c.nameJson);
-        if (c.priceAbsolute != null) base = c.priceAbsolute;
-        else delta += c.priceDelta;
-      }
-    }
-  }
-  return { unit: base + delta, names };
-}
 
 function parseChoices(snap: string, lang: string): string {
   try {
@@ -575,7 +607,7 @@ function ItemModal({
   });
 
   const choiceIds = useMemo(() => Object.values(selected).flat(), [selected]);
-  const { unit } = priceFor(item, choiceIds);
+  const { unitMinor: unit } = priceLine(item, choiceIds);
 
   const toggle = (g: PublicItem["optionGroups"][number], choiceId: string) => {
     setSelected((prev) => {

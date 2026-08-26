@@ -65,6 +65,11 @@ const dict = {
     tableBusy: "Masanızdan {n} sipariş şu an hazırlanıyor.",
     tableBusyHint: "Aynı şeyi iki kez ısmarlamamak için önce masanın siparişlerine bakın.",
     viewTableOrders: "Masanın siparişlerini gör",
+    cartShared: "Bu sepet masanın ortak sepeti. Masadaki herkes ekleyip çıkarabilir.",
+    cartFull: "Sepet dolu. Önce mevcut siparişi gönderin.",
+    cartFailed: "Sepet güncellenemedi, tekrar deneyin.",
+    cartAlreadySent: "Masanızdan biri siparişi az önce göndermiş.",
+    orderFailed: "Sipariş gönderilemedi, tekrar deneyin.",
   },
   en: {
     menu: "MENU",
@@ -113,6 +118,11 @@ const dict = {
     tableBusy: "{n} order(s) from your table are being prepared.",
     tableBusyHint: "Check the table's orders first so nothing gets ordered twice.",
     viewTableOrders: "View table orders",
+    cartShared: "This cart belongs to the whole table. Anyone seated here can add or remove.",
+    cartFull: "The cart is full. Send the current order first.",
+    cartFailed: "Could not update the cart, please try again.",
+    cartAlreadySent: "Someone at your table just sent the order.",
+    orderFailed: "Could not send the order, please try again.",
   },
 } as const;
 

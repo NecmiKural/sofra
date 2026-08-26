@@ -21,10 +21,15 @@ assert.ok(!rateLimit("k", 3), "fourth call over a limit of 3 is blocked");
 assert.ok(rateLimit("other-key", 3), "buckets are independent");
 
 const req = new Request("http://x/api/requests", { headers: { "x-forwarded-for": "1.2.3.4, 10.0.0.1" } });
-assert.equal(guestGate(req, slug, 7, token, 2), null, "valid token passes");
-assert.equal(guestGate(req, slug, 7, token, 2), null);
-assert.equal(guestGate(req, slug, 7, token, 2)?.status, 429, "third call is rate limited");
-assert.equal(guestGate(req, slug, 9, tableToken(slug, 9), 2), null, "a different table has its own bucket");
-assert.equal(guestGate(req, slug, 7, "deadbeefdeadbeef", 2)?.status, 403, "forged token is rejected");
+assert.equal(guestGate(req, slug, 7, token, 2, "order"), null, "valid token passes");
+assert.equal(guestGate(req, slug, 7, token, 2, "order"), null);
+assert.equal(guestGate(req, slug, 7, token, 2, "order")?.status, 429, "third call is rate limited");
+assert.equal(guestGate(req, slug, 9, tableToken(slug, 9), 2, "order"), null, "a different table has its own bucket");
+assert.equal(
+  guestGate(req, slug, 7, token, 2, "cart"),
+  null,
+  "a busy shared cart must not spend the table's ordering budget"
+);
+assert.equal(guestGate(req, slug, 7, "deadbeefdeadbeef", 2, "order")?.status, 403, "forged token is rejected");
 
 console.log("guest token + rate limit checks passed");

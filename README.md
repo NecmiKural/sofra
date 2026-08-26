@@ -25,7 +25,10 @@ The demo runs on a free instance: it sleeps after 15 minutes idle (first request
 - **Categories & subcategories** with photos or emoji, prep times, dietary tags (popular / vegetarian / vegan / spicy / gluten-free)
 - **Option groups:** portions with their own prices, paid extras, sizes, sugar levels
 - **Live table actions:** call waiter & request bill, streamed to the staff panel over SSE
-- **Table ordering:** cart, notes, server-side pricing, live order statuses
+- **Shared table ordering:** one cart per table, not per phone. Everyone seated
+  together adds from their own device, sees the same lines, and the table sends
+  a single order, so the kitchen never receives one party's food as unrelated
+  tickets. Notes, server-side pricing, live order statuses
 - **Pay at the table:** pluggable payment layer; ships with a demo provider, Stripe/iyzico adapters are on the roadmap
 - **Feature toggles:** waiter / bill / ordering / payments can each be switched per venue
 - **Theming:** per-venue brand color, light / dark / auto

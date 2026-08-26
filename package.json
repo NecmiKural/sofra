@@ -16,7 +16,9 @@
     "db:seed": "prisma migrate deploy && tsx scripts/seed.ts",
     "postinstall": "prisma generate",
     "check:guest": "tsx scripts/check-guest.ts",
-    "check:tables": "tsx scripts/check-table-orders.ts"
+    "check:tables": "tsx scripts/check-table-orders.ts",
+    "check:pricing": "tsx scripts/check-pricing.ts",
+    "check": "npm run check:guest && npm run check:tables && npm run check:pricing"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

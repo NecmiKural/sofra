@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     if (!slug || table == null || (type !== "waiter" && type !== "bill")) {
       return json({ error: "bad_request" }, 400);
     }
-    const blocked = guestGate(req, slug, Number(table), t, 6);
+    const blocked = guestGate(req, slug, Number(table), t, 6, "request");
     if (blocked) return blocked;
     const venue = await getVenueBySlug(slug);
     if (!venue) return json({ error: "venue_not_found" }, 404);

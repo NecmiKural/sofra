@@ -42,6 +42,7 @@ model Venue {
   orders     Order[]
   payments   Payment[]
   scanEvents ScanEvent[]
+  cartLines  CartLine[]
 
   @@map("venues")
 }
@@ -70,6 +71,7 @@ model Table {
   requests   Request[]
   orders     Order[]
   scanEvents ScanEvent[]
+  cartLines  CartLine[]
 
   @@unique([venueId, number])
   @@map("tables")
@@ -108,6 +110,7 @@ model MenuItem {
   category     Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   optionGroups OptionGroup[]
   orderItems   OrderItem[]
+  cartLines    CartLine[]
 
   @@map("menu_items")
 }
@@ -153,6 +156,28 @@ model Request {
 
   @@index([venueId, status])
   @@map("requests")
+}
+
+/// A table's shared draft cart. Everyone seated at the table adds to the same
+/// rows from their own phone, and sending turns the whole cart into one order,
+/// so the kitchen never receives a table's food as unrelated tickets.
+model CartLine {
+  id        String   @id @default(cuid())
+  venueId   String
+  tableId   String
+  itemId    String
+  qty       Int      @default(1)
+  /// Selected option choice ids, comma separated. Prices stay live: a draft
+  /// line is repriced from the menu on every read, never snapshotted.
+  choiceIds String   @default("")
+  createdAt DateTime @default(now())
+
+  venue Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  table Table    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  item  MenuItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([venueId, tableId])
+  @@map("cart_lines")
 }
 
 model Order {
