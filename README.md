@@ -1,10 +1,10 @@
 # 🍽️ Sofra
 
-**Open-source QR menu, table service and payments for restaurants, cafés, bars and hotels.**
+**Open-source QR menu and table service for restaurants, cafés, bars and hotels, with a pluggable payment layer that ships with a demo provider.**
 
 *Türkçe README için: [README.tr.md](README.tr.md)*
 
-Sofra turns every table into a live QR menu. Guests scan the table's QR code and get the menu in their language; they can call a waiter, request the bill, order from the table and even pay online. Staff see everything land on a live panel the second it happens. No app downloads, no POS hardware, no commission. It runs on your own server.
+Sofra turns every table into a live QR menu. Guests scan the table's QR code and get the menu in their language; they can call a waiter, request the bill, order from the table and split the bill. Payment runs through a demo provider for now; real providers are on the roadmap. Staff see everything land on a live panel the second it happens. No app downloads, no POS hardware, no commission. It runs on your own server.
 
 > "Sofra" is Turkish for a set dining table.
 
@@ -45,7 +45,7 @@ The demo runs on a free instance: it sleeps after 15 minutes idle (first request
 Requires **Node.js >= 18.18**.
 
 ```bash
-git clone <this-repo> sofra && cd sofra
+git clone https://github.com/NecmiKural/sofra.git sofra && cd sofra
 cp .env.example .env
 npm install         # runs `prisma generate`
 npm run db:seed     # applies migrations, then seeds a demo venue with a full bilingual menu
@@ -62,17 +62,10 @@ Changed the schema? `npm run db:migrate` creates and applies a new migration
 
 ### Docker
 
-Every release publishes a multi-arch image:
-
-```bash
-docker run -d -p 3000:3000 \
-  -v sofra-data:/app/data \
-  -e SESSION_SECRET="$(openssl rand -hex 32)" \
-  ghcr.io/OWNER/sofra:latest
-```
-
-Migrations run automatically on start. Set `SEED_DEMO=1` on the first run to load
-the demo venue. Or use the bundled compose file:
+The release workflow publishes a multi-arch image when a version tag is pushed;
+no image has been published yet, so build and run it with the bundled compose
+file. Migrations run automatically on start. Set `SEED_DEMO=1` on the first run
+to load the demo venue.
 
 ```bash
 docker compose up --build

@@ -1,10 +1,10 @@
 # 🍽️ Sofra
 
-**Restoranlar, kafeler, barlar ve oteller için açık kaynak QR menü, masa servisi ve ödeme platformu.**
+**Restoranlar, kafeler, barlar ve oteller için açık kaynak QR menü ve masa servisi; takılabilir ödeme katmanı şimdilik demo sağlayıcıyla gelir.**
 
 *English README: [README.md](README.md)*
 
-Sofra her masayı canlı bir QR menüye dönüştürür. Misafir masadaki QR'ı okutur, menü kendi dilinde ve masa numarasıyla açılır; garson çağırır, hesap ister, masadan sipariş verir, isterse online öder. Personel her şeyi anında canlı panelde görür. Uygulama indirme yok, POS cihazı yok, komisyon yok. Kendi sunucunuzda çalışır.
+Sofra her masayı canlı bir QR menüye dönüştürür. Misafir masadaki QR'ı okutur, menü kendi dilinde ve masa numarasıyla açılır; garson çağırır, hesap ister, masadan sipariş verir, hesabı böler. Ödeme şimdilik demo sağlayıcıyla çalışır; gerçek sağlayıcılar yol haritasında. Personel her şeyi anında canlı panelde görür. Uygulama indirme yok, POS cihazı yok, komisyon yok. Kendi sunucunuzda çalışır.
 
 ## Canlı demo
 
@@ -42,7 +42,7 @@ Demo ücretsiz bir instance üzerinde çalışır: 15 dakika hareketsizlikten so
 **Node.js >= 18.18** gerekir.
 
 ```bash
-git clone <bu-repo> sofra && cd sofra
+git clone https://github.com/NecmiKural/sofra.git sofra && cd sofra
 cp .env.example .env
 npm install         # `prisma generate` çalışır
 npm run db:seed     # migration'ları uygular, sonra iki dilli demo işletmeyi ekler
@@ -59,17 +59,10 @@ npm run dev
 
 ### Docker
 
-Her sürüm çok mimarili bir imaj yayınlar:
-
-```bash
-docker run -d -p 3000:3000 \
-  -v sofra-data:/app/data \
-  -e SESSION_SECRET="$(openssl rand -hex 32)" \
-  ghcr.io/OWNER/sofra:latest
-```
-
+Sürüm iş akışı, bir sürüm etiketi gönderildiğinde çok mimarili bir imaj yayınlar;
+henüz imaj yayınlanmadı, bu yüzden depodaki compose dosyasıyla derleyip çalıştırın.
 Migration'lar açılışta otomatik çalışır. İlk çalıştırmada demo işletmeyi yüklemek
-için `SEED_DEMO=1` verin. Ya da depodaki compose dosyasını kullanın:
+için `SEED_DEMO=1` verin.
 
 ```bash
 docker compose up --build
