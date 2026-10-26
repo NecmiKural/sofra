@@ -2,8 +2,8 @@
   "name": "sofra",
   "version": "0.1.0",
   "private": true,
-  "description": "Open-source QR menu, table service and payments for restaurants.",
-  "license": "MIT",
+  "description": "Open-source QR menu and table service for restaurants.",
+  "license": "Apache-2.0",
   "engines": {
     "node": ">=18.18.0"
   },

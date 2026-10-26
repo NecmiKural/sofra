@@ -131,4 +131,4 @@ Issues and PRs are welcome. Keep PRs focused, describe the venue scenario you're
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE)
